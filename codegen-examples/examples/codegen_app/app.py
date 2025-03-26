@@ -1,5 +1,6 @@
 import logging
 import os
+from fastapi import Request, Response
 
 import modal
 from codegen import CodeAgent, CodegenApp
@@ -17,6 +18,31 @@ logger = logging.getLogger(__name__)
 
 # Create the cg_app
 cg = CodegenApp(name="codegen-test", repo="codegen-sh/Kevin-s-Adventure-Game")
+
+# Add explicit route handlers for webhooks
+@cg.app.post("/slack/events")
+async def slack_webhook(request: Request):
+    """Handle Slack webhook events, including URL verification."""
+    logger.info("[SLACK] Received webhook request")
+    
+    # Get the request body
+    body = await request.json()
+    logger.info(f"[SLACK] Request body: {body}")
+    
+    # Handle Slack URL verification challenge
+    if body.get("type") == "url_verification":
+        logger.info("[SLACK] Handling URL verification challenge")
+        challenge = body.get("challenge")
+        return {"challenge": challenge}
+    
+    # Process the event through the normal event handlers
+    return await cg.slack.handle_webhook(request)
+
+@cg.app.post("/github/events")
+async def github_webhook(request: Request):
+    """Handle GitHub webhook events."""
+    logger.info("[GITHUB] Received webhook request")
+    return await cg.github.handle_webhook(request)
 
 @cg.slack.event("app_mention")
 async def handle_mention(event: SlackEvent):

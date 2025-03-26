@@ -27,7 +27,7 @@ Before setting up webhooks, make sure you have:
    ```
    https://your-modal-app-url/slack/events
    ```
-   (Replace `your-modal-app-url` with your actual Modal app URL)
+   (Replace `your-modal-app-url` with your actual Modal app URL, e.g., `https://zeeeepa--codegen-test-fastapi-app.modal.run`)
 6. Wait for Slack to verify the URL (it will send a challenge that your app should respond to)
 7. Under "Subscribe to bot events", add the following events:
    - `app_mention` (to handle mentions)
@@ -48,7 +48,7 @@ Before setting up webhooks, make sure you have:
    ```
    https://your-modal-app-url/github/events
    ```
-   (Replace `your-modal-app-url` with your actual Modal app URL)
+   (Replace `your-modal-app-url` with your actual Modal app URL, e.g., `https://zeeeepa--codegen-test-fastapi-app.modal.run`)
 5. Set "Content type" to `application/json`
 6. Enter your webhook secret (same as `GITHUB_WEBHOOK_SECRET` in your .env file)
 7. Under "Which events would you like to trigger this webhook?", select:
@@ -74,6 +74,27 @@ If Slack can't verify your URL, make sure:
 - Your app is properly handling the `url_verification` event type
 - Your app is returning the `challenge` parameter in the response
 
+The app.py file now includes explicit handling for the Slack URL verification challenge:
+```python
+@cg.app.post("/slack/events")
+async def slack_webhook(request: Request):
+    """Handle Slack webhook events, including URL verification."""
+    logger.info("[SLACK] Received webhook request")
+    
+    # Get the request body
+    body = await request.json()
+    logger.info(f"[SLACK] Request body: {body}")
+    
+    # Handle Slack URL verification challenge
+    if body.get("type") == "url_verification":
+        logger.info("[SLACK] Handling URL verification challenge")
+        challenge = body.get("challenge")
+        return {"challenge": challenge}
+    
+    # Process the event through the normal event handlers
+    return await cg.slack.handle_webhook(request)
+```
+
 #### GitHub Webhook Signature Verification Fails
 
 If GitHub webhook signature verification fails:
@@ -95,3 +116,10 @@ After setting up your webhooks, you can test them by:
 2. **For GitHub**: Create a PR or add a label to an existing PR
 
 You should see logs in your Modal deployment showing the received events.
+
+## Webhook URLs
+
+For your Codegen app deployed at `https://zeeeepa--codegen-test-fastapi-app.modal.run`, use these webhook URLs:
+
+- **Slack Events API**: `https://zeeeepa--codegen-test-fastapi-app.modal.run/slack/events`
+- **GitHub Webhooks**: `https://zeeeepa--codegen-test-fastapi-app.modal.run/github/events`
