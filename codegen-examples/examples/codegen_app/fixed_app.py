@@ -11,6 +11,9 @@ from codegen.extensions.github.types.events.pull_request import PullRequestLabel
 from codegen.extensions.slack.types import SlackEvent
 from codegen.extensions.tools.github.create_pr_comment import create_pr_comment
 
+# Import test functions
+from test_functions import run_tests
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -274,6 +277,14 @@ if __name__ == "__main__":
 
     if not os.environ.get("GITHUB_TOKEN"):
         logger.warning("GITHUB_TOKEN not found in environment. GitHub integration may not work correctly.")
+        
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        logger.warning("ANTHROPIC_API_KEY not found in environment. Anthropic API integration may not work correctly.")
+
+    # Run test functions
+    logger.info("Running test functions...")
+    test_results = run_tests()
+    logger.info(f"Test results: {test_results}")
 
     # Log the available routes for debugging
     logger.info("Available API routes:")
@@ -295,3 +306,4 @@ if __name__ == "__main__":
 
     # Run the FastAPI app locally
     uvicorn.run(cg.app, host="0.0.0.0", port=port, log_level="info")
+
