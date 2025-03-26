@@ -98,4 +98,42 @@ app = modal.App("codegen-test")
 @modal.asgi_app()
 def fastapi_app():
     print("Starting codegen fastapi app")
-    return cg.app
+    # Configure the app routes
+    from fastapi import FastAPI, Request, Response
+    from fastapi.responses import JSONResponse
+    
+    # Get the FastAPI app from CodegenApp
+    fastapi_app = cg.app
+    
+    # Add a root route handler for health checks
+    @fastapi_app.get("/")
+    async def root():
+        return {"status": "ok", "message": "Codegen app is running"}
+    
+    # Add explicit webhook routes for better debugging
+    @fastapi_app.post("/slack/events")
+    async def slack_events(request: Request):
+        logger.info("Received Slack event")
+        body = await request.json()
+        logger.info(f"Slack event body: {body}")
+        
+        # Handle URL verification challenge
+        if body.get("type") == "url_verification":
+            logger.info("Handling Slack URL verification challenge")
+            challenge = body.get("challenge")
+            return JSONResponse(content={"challenge": challenge})
+        
+        # Forward to the CodegenApp handler
+        return await cg.slack.handle_event(request)
+    
+    @fastapi_app.post("/github/events")
+    async def github_events(request: Request):
+        logger.info("Received GitHub event")
+        return await cg.github.handle_event(request)
+    
+    @fastapi_app.post("/linear/events")
+    async def linear_events(request: Request):
+        logger.info("Received Linear event")
+        return await cg.linear.handle_event(request)
+    
+    return fastapi_app
