@@ -1,11 +1,13 @@
+#!/usr/bin/env python3
+"""
+Standalone script to debug Anthropic API issues.
+This script provides detailed error information when testing the Anthropic API.
+"""
+
 import os
-import time
 import logging
-import threading
 import anthropic
 from dotenv import load_dotenv
-from slack_sdk import WebClient
-from slack_sdk.errors import SlackApiError
 
 # Set up logging
 logging.basicConfig(
@@ -17,49 +19,9 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
-def send_slack_startup_message(delay=30):
+def debug_anthropic_api():
     """
-    Send a message to Slack after a specified delay.
-    
-    Args:
-        delay (int): Number of seconds to wait before sending the message.
-                    Default is 30 seconds. Set to 0 to send immediately.
-    """
-    # Wait for the specified delay
-    if delay > 0:
-        logger.info(f"Waiting {delay} seconds before sending Slack message...")
-        time.sleep(delay)
-    
-    # Get Slack credentials from environment
-    slack_token = os.environ.get("SLACK_BOT_TOKEN")
-    slack_channel = os.environ.get("SLACK_NOTIFICATION_CHANNEL")
-    
-    if not slack_token:
-        logger.error("SLACK_BOT_TOKEN not found in environment variables")
-        return
-    
-    if not slack_channel:
-        logger.error("SLACK_NOTIFICATION_CHANNEL not found in environment variables")
-        return
-    
-    # Initialize Slack client
-    client = WebClient(token=slack_token)
-    
-    try:
-        # Send message
-        response = client.chat_postMessage(
-            channel=slack_channel,
-            text="🚀 *Bot Started Successfully!* 🚀\nThe Slack integration is working correctly."
-        )
-        logger.info(f"Slack startup message sent successfully: {response['ts']}")
-        return response
-    except SlackApiError as e:
-        logger.error(f"Error sending Slack message: {e.response['error']}")
-        return None
-
-def test_anthropic_api():
-    """
-    Test the Anthropic API by making a simple call and printing the response.
+    Test the Anthropic API with detailed error reporting.
     """
     # Get Anthropic API key from environment
     api_key = os.environ.get("ANTHROPIC_API_KEY")
@@ -67,6 +29,12 @@ def test_anthropic_api():
     if not api_key:
         logger.error("ANTHROPIC_API_KEY not found in environment variables")
         return
+    
+    # Log the first few characters of the API key (for debugging format issues)
+    # Be careful not to log the entire key for security reasons
+    key_prefix = api_key[:4] + "..." + api_key[-4:] if len(api_key) > 8 else "too short"
+    key_length = len(api_key)
+    logger.info(f"API key prefix/suffix: {key_prefix}, length: {key_length}")
     
     # Check for common formatting issues
     if api_key.startswith('"') or api_key.endswith('"'):
@@ -85,6 +53,7 @@ def test_anthropic_api():
     
     try:
         # Initialize Anthropic client
+        logger.info("Initializing Anthropic client...")
         client = anthropic.Anthropic(api_key=api_key)
         
         # Make a simple API call
@@ -102,6 +71,7 @@ def test_anthropic_api():
         return message.content[0].text
     except Exception as e:
         logger.error(f"Error making Anthropic API call: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
         
         # Provide more specific guidance based on error type
         if "401" in str(e):
@@ -112,36 +82,15 @@ def test_anthropic_api():
             logger.error("Not found error: The requested resource (likely the model) doesn't exist")
         elif "429" in str(e):
             logger.error("Rate limit error: You've exceeded your API rate limits")
+        elif "timeout" in str(e).lower():
+            logger.error("Timeout error: The request took too long to complete")
         
         return None
 
-def run_tests():
-    """
-    Run all test functions.
-    """
-    logger.info("Starting test functions...")
-    
-    # Start the Slack message thread
-    slack_thread = threading.Thread(target=send_slack_startup_message)
-    slack_thread.daemon = True
-    slack_thread.start()
-    logger.info("Slack startup message scheduled (will send in 30 seconds)")
-    
-    # Test Anthropic API
-    anthropic_response = test_anthropic_api()
-    if anthropic_response:
-        logger.info("Anthropic API test completed successfully")
-    else:
-        logger.error("Anthropic API test failed")
-    
-    logger.info("All tests initiated")
-    
-    return {
-        "slack_message_scheduled": True,
-        "anthropic_test_result": anthropic_response is not None,
-        "anthropic_response": anthropic_response
-    }
-
 if __name__ == "__main__":
-    # Run tests directly if this file is executed
-    run_tests()
+    logger.info("=== ANTHROPIC API DEBUGGING TOOL ===")
+    result = debug_anthropic_api()
+    if result:
+        logger.info("✅ Anthropic API test SUCCESSFUL")
+    else:
+        logger.error("❌ Anthropic API test FAILED")
