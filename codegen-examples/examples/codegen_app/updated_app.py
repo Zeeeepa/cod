@@ -59,10 +59,7 @@ def handle_pr_labeled(event: PullRequestLabeledEvent):
     file = codebase.get_file("README.md")
 
     # Create PR comment
-    create_pr_comment(codebase, event.pull_request.number, f"File content:
-```markdown
-{file.content}
-```")
+    create_pr_comment(codebase, event.pull_request.number, f"File content:\n```markdown\n{file.content}\n```")
 
     # Notify Slack if SLACK_NOTIFICATION_CHANNEL is set
     slack_channel = os.environ.get("SLACK_NOTIFICATION_CHANNEL")
@@ -75,12 +72,9 @@ def handle_pr_labeled(event: PullRequestLabeledEvent):
         label = event.label.name
         
         message = (
-            f"*PR #{pr_number} labeled with `{label}`*
-"
-            f"*Repository:* {repo_name}
-"
-            f"*Title:* {pr_title}
-"
+            f"*PR #{pr_number} labeled with `{label}`*\n"
+            f"*Repository:* {repo_name}\n"
+            f"*Title:* {pr_title}\n"
             f"*URL:* {pr_url}"
         )
         
@@ -111,26 +105,18 @@ def handle_pr_opened(event: PullRequestOpenedEvent):
         pr_body = event.pull_request.body or "No description provided"
         
         message = (
-            f"*New PR #{pr_number} opened*
-"
-            f"*Repository:* {repo_name}
-"
-            f"*Title:* {pr_title}
-"
-            f"*URL:* {pr_url}
-
-"
-            f"*Description:*
-{pr_body}"
+            f"*New PR #{pr_number} opened*\n"
+            f"*Repository:* {repo_name}\n"
+            f"*Title:* {pr_title}\n"
+            f"*URL:* {pr_url}\n\n"
+            f"*Description:*\n{pr_body}"
         )
         
         cg.slack.client.chat_postMessage(channel=slack_channel, text=message)
 
     # Add a welcome comment to the PR
     welcome_message = (
-        "Thanks for opening this PR! 🎉
-
-"
+        "Thanks for opening this PR! 🎉\n\n"
         "I'll analyze your changes and provide feedback shortly."
     )
     create_pr_comment(codebase, event.pull_request.number, welcome_message)
@@ -165,12 +151,10 @@ async def handle_message(event: SlackEvent):
     
     return {"message": "DM handled", "response": response}
 
-
 ########################################################################################################################
 # MODAL DEPLOYMENT
 ########################################################################################################################
 # This deploys the FastAPI app to Modal
-# TODO: link this up with memory snapshotting.
 
 # For deploying local package
 REPO_URL = "https://github.com/codegen-sh/codegen-sdk.git"
@@ -192,7 +176,6 @@ base_image = (
 )
 
 app = modal.App("codegen-test")
-
 
 @app.function(image=base_image, secrets=[modal.Secret.from_dotenv()])
 @modal.asgi_app()
