@@ -1,8 +1,6 @@
 import logging
 import os
 from fastapi import Request, Response
-
-import modal
 from codegen import CodeAgent, CodegenApp
 from codegen.extensions.github.types.events.pull_request import PullRequestLabeledEvent, PullRequestOpenedEvent
 from codegen.extensions.slack.types import SlackEvent
@@ -17,7 +15,7 @@ logger = logging.getLogger(__name__)
 ########################################################################################################################
 
 # Create the cg_app
-cg = CodegenApp(name="codegen-test", repo="codegen-sh/Kevin-s-Adventure-Game")
+cg = CodegenApp(name="code", repo="zeeeepa/cod")
 
 # Add explicit route handlers for webhooks
 @cg.app.post("/slack/events")
@@ -175,36 +173,6 @@ async def handle_message(event: SlackEvent):
     return {"message": "DM handled", "response": response}
 
 
-########################################################################################################################
-# MODAL DEPLOYMENT
-########################################################################################################################
-# This deploys the FastAPI app to Modal
-# TODO: link this up with memory snapshotting.
-
-# For deploying local package
-REPO_URL = "https://github.com/codegen-sh/codegen-sdk.git"
-COMMIT_ID = "6a0e101718c247c01399c60b7abf301278a41786"
-
-# Create the base image with dependencies
-base_image = (
-    modal.Image.debian_slim(python_version="3.13")
-    .apt_install("git")
-    .pip_install(
-        # =====[ Codegen ]=====
-        # "codegen",
-        f"git+{REPO_URL}@{COMMIT_ID}",
-        # =====[ Rest ]=====
-        "openai>=1.1.0",
-        "fastapi[standard]",
-        "slack_sdk",
-    )
-)
-
-app = modal.App("codegen-test")
-
-
-@app.function(image=base_image, secrets=[modal.Secret.from_dotenv()])
-@modal.asgi_app()
 def fastapi_app():
     print("Starting codegen fastapi app")
     return cg.app
